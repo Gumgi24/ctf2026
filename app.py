@@ -322,16 +322,6 @@ def submit_flag(challenge_id):
     if not ch or ch["is_parent"]:
         abort(404)
 
-    status = get_team_status(team_id, challenge_id)
-
-    if status["solved"]:
-        flash(f'"{ch["title"]}" est déjà résolu.', "info")
-        return redirect(url_for("challenges"))
-
-    if status["locked"]:
-        flash(f'"{ch["title"]}" est verrouillé après trop de mauvaises réponses.', "danger")
-        return redirect(url_for("challenges"))
-
     submitted = request.form.get("answer", "").strip()
     if not submitted:
         flash("Veuillez entrer une réponse.", "warning")
@@ -340,34 +330,55 @@ def submit_flag(challenge_id):
     answers = get_answers(challenge_id)
     correct = check_answer(submitted, answers, ch["compare_mode"])
 
-    if correct:
-        try:
+    # BEGIN IMMEDIATE acquiert un verrou d'écriture dès le début de la
+    # transaction : deux soumissions simultanées pour le même flag sont
+    # ainsi sérialisées, éliminant le TOCTOU sur wrong_count.
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        status = get_team_status(team_id, challenge_id)
+
+        if status["solved"]:
+            db.execute("ROLLBACK")
+            flash(f'"{ch["title"]}" est déjà résolu.', "info")
+            return redirect(url_for("challenges"))
+
+        if status["locked"]:
+            db.execute("ROLLBACK")
+            flash(f'"{ch["title"]}" est verrouillé après trop de mauvaises réponses.', "danger")
+            return redirect(url_for("challenges"))
+
+        if correct:
+            try:
+                db.execute(
+                    "INSERT INTO submissions (team_id, challenge_id) VALUES (?, ?)",
+                    (team_id, challenge_id),
+                )
+                db.execute("COMMIT")
+                flash(f'✓ Correct ! {ch["points"]} point(s) pour "{ch["title"]}".', "success")
+            except sqlite3.IntegrityError:
+                db.execute("ROLLBACK")
+                flash(f'"{ch["title"]}" est déjà résolu.', "info")
+        else:
             db.execute(
-                "INSERT INTO submissions (team_id, challenge_id) VALUES (?, ?)",
+                """
+                INSERT INTO attempts (team_id, challenge_id, wrong_count) VALUES (?, ?, 1)
+                ON CONFLICT(team_id, challenge_id) DO UPDATE SET wrong_count = wrong_count + 1
+                """,
                 (team_id, challenge_id),
             )
-            db.commit()
-            flash(f'✓ Correct ! {ch["points"]} point(s) pour "{ch["title"]}".', "success")
-        except sqlite3.IntegrityError:
-            flash(f'"{ch["title"]}" est déjà résolu.', "info")
-    else:
-        db.execute(
-            """
-            INSERT INTO attempts (team_id, challenge_id, wrong_count) VALUES (?, ?, 1)
-            ON CONFLICT(team_id, challenge_id) DO UPDATE SET wrong_count = wrong_count + 1
-            """,
-            (team_id, challenge_id),
-        )
-        db.commit()
-        new_status = get_team_status(team_id, challenge_id)
-        if new_status["locked"]:
-            flash(f'Réponse incorrecte. "{ch["title"]}" est maintenant verrouillé.', "danger")
-        else:
-            r = new_status["remaining"]
-            flash(
-                f'Réponse incorrecte. Il vous reste {r} essai(s) pour "{ch["title"]}".',
-                "warning",
-            )
+            db.execute("COMMIT")
+            new_status = get_team_status(team_id, challenge_id)
+            if new_status["locked"]:
+                flash(f'Réponse incorrecte. "{ch["title"]}" est maintenant verrouillé.', "danger")
+            else:
+                r = new_status["remaining"]
+                flash(
+                    f'Réponse incorrecte. Il vous reste {r} essai(s) pour "{ch["title"]}".',
+                    "warning",
+                )
+    except Exception:
+        db.execute("ROLLBACK")
+        raise
 
     return redirect(url_for("challenges"))
 
