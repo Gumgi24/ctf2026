@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Scoreboard — CTF Cybergames 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Scoreboard</h2>
+  <a href="{{ url_for('scoreboard') }}" class="btn btn-secondary btn-sm">↺ Actualiser</a>
+</div>
+
+<div class="table-wrapper">
+  <table class="scoreboard-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Équipe</th>
+        <th>Score</th>
+        <th>Flags</th>
+        <th>Dernière résolution</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in board %}
+      <tr class="{% if row.rank <= 3 %}top-{{ row.rank }}{% endif %}">
+        <td>
+          <span class="rank rank-{{ row.rank if row.rank <= 3 else 'other' }}">
+            {{ row.rank }}
+          </span>
+        </td>
+        <td>{{ row.name }}</td>
+        <td><strong>{{ row.score }}</strong></td>
+        <td>{{ row.solved }}</td>
+        <td class="text-muted small">{{ row.last_solve | fmt_ts }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

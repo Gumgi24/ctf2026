@@ -1,0 +1,12 @@
+services:
+  ctf:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      # Persistance de la base SQLite
+      - ./ctf.db:/app/ctf.db
+      # Images des challenges (island.png, ship.png)
+      - ./static/assets:/app/static/assets
+    restart: unless-stopped

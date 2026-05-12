@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}CTF Cybergames 2026{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <h1>CTF Cybergames 2026</h1>
+  <p>Plateforme de Capture The Flag — sélectionnez votre équipe pour commencer.</p>
+  <div class="hero-actions">
+    <a href="{{ url_for('team_select') }}" class="btn btn-primary">Choisir mon équipe</a>
+    <a href="{{ url_for('scoreboard') }}" class="btn btn-secondary">Scoreboard</a>
+  </div>
+</div>
+{% endblock %}

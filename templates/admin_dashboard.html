@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Administration — CTF Cybergames 2026{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">Administration</h2>
+  <form method="POST" action="{{ url_for('admin_reset_all') }}"
+        onsubmit="return confirm('Réinitialiser TOUTE la compétition ? Cette action est irréversible.')">
+    <button class="btn btn-danger btn-sm">⚠ Réinitialiser toute la compétition</button>
+  </form>
+</div>
+
+<div class="table-wrapper">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Équipe</th>
+        <th>Score</th>
+        <th>Flags</th>
+        <th>Dernière résolution</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in scores %}
+      <tr>
+        <td>
+          <a href="{{ url_for('admin_team', team_id=s.id) }}">{{ s.name }}</a>
+        </td>
+        <td><strong>{{ s.score }}</strong></td>
+        <td>{{ s.solved }}</td>
+        <td class="text-muted small">{{ s.last_solve | fmt_ts }}</td>
+        <td class="actions-cell">
+          <a href="{{ url_for('admin_team', team_id=s.id) }}"
+             class="btn btn-secondary btn-sm">Détails</a>
+          <form method="POST" action="{{ url_for('admin_reset_team', team_id=s.id) }}"
+                style="display:inline"
+                onsubmit="return confirm('Réinitialiser {{ s.name }} ?')">
+            <button class="btn btn-danger btn-sm">Reset</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

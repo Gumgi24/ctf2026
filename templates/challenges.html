@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Challenges — CTF Cybergames 2026{% endblock %}
+
+{% block content %}
+
+{# ── Barre de score équipe ─────────────────────────────────────────────── #}
+<div class="score-bar">
+  <div>
+    <span class="score-team">{{ team.name }}</span>
+    <span class="score-value">{{ score }} pts</span>
+  </div>
+  <div class="text-muted small">{{ solved_count }} flag(s) résolu(s)</div>
+</div>
+
+{# ── Macro : carte d'un flag soumettable ──────────────────────────────── #}
+{% macro flag_card(ch, extra=false) %}
+{% set st = ch.status %}
+<div class="card challenge-card
+  {% if st.solved %}solved{% elif st.locked %}locked{% endif %}
+  {% if extra %}extra-challenge{% endif %}">
+
+  <div class="challenge-header">
+    <span class="challenge-title">{{ ch.title }}</span>
+    <div class="challenge-meta">
+      <span class="badge badge-pts">{{ ch.points }} pt(s)</span>
+      {% if st.solved %}
+        <span class="badge badge-ok">✓ Résolu</span>
+      {% elif st.locked %}
+        <span class="badge badge-fail">✗ Bloqué</span>
+      {% else %}
+        <span class="badge badge-open">Non résolu</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if ch.image %}
+  <img src="{{ url_for('static', filename='assets/' + ch.image) }}"
+       alt="Image du challenge" class="challenge-image">
+  {% endif %}
+
+  <p class="challenge-desc">{{ ch.description }}</p>
+
+  {% if ch.expected_form %}
+  <p class="form-hint">Forme attendue&nbsp;: <code>{{ ch.expected_form }}</code></p>
+  {% endif %}
+
+  {% if not st.solved and not st.locked %}
+  <form method="POST" action="{{ url_for('submit_flag', challenge_id=ch.id) }}">
+    <div class="submit-row">
+      <input type="text" name="answer" class="form-control"
+             placeholder="Votre réponse…" autocomplete="off" spellcheck="false" required>
+      <button type="submit" class="btn btn-primary btn-sm">Valider</button>
+    </div>
+    <p class="attempts-info">{{ st.remaining }} essai(s) restant(s)</p>
+  </form>
+  {% elif st.solved %}
+  <p class="status-ok">✓ Ce flag est résolu.</p>
+  {% else %}
+  <p class="status-fail">✗ Ce flag est verrouillé après 3 mauvaises réponses.</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Challenge extra préliminaire ─────────────────────────────────────── #}
+{% set extras = challenges | selectattr('category', 'equalto', 'extra') | list %}
+{% if extras %}
+<div class="section-header">
+  <span class="section-title">Challenge préliminaire</span>
+  <span class="badge extra-badge">BONUS +3 pts</span>
+</div>
+{% for ch in extras %}
+  {{ flag_card(ch, extra=true) }}
+{% endfor %}
+{% endif %}
+
+{# ── CTF principal ────────────────────────────────────────────────────── #}
+<div class="section-header">
+  <span class="section-title">La piste du tanker fantôme</span>
+</div>
+<p class="ctf-intro">
+  Vous recevez une photo d'un tanker. Votre objectif est de suivre sa trace à travers
+  ses changements d'identité, une annonce commerciale, un faux certificat, des cas
+  d'abandon des gens de mer, un rapport de piraterie, puis une saisie récente.
+</p>
+
+{% for ch in challenges %}
+{% if ch.category == 'main' %}
+
+  {% if ch.is_parent %}
+  {# ── Challenge parent avec sous-flags ─────────────────────────────── #}
+  <div class="parent-block">
+    <div class="parent-header">
+      <span class="parent-title">{{ ch.title }}</span>
+    </div>
+    <p class="parent-desc">{{ ch.description }}</p>
+    <div class="sub-flags">
+      {% for sub in ch.children %}
+        {{ flag_card(sub) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% else %}
+  {# ── Challenge simple ─────────────────────────────────────────────── #}
+  {{ flag_card(ch) }}
+  {% endif %}
+
+{% endif %}
+{% endfor %}
+
+{% endblock %}

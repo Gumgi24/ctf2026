@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Admin — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Tableau de bord</a>
+    <h2 class="page-title" style="margin-top:.25rem">{{ team.name }}</h2>
+    <p class="text-muted small">{{ score }} pts — {{ solved_count }} flag(s) résolu(s)</p>
+  </div>
+  <form method="POST" action="{{ url_for('admin_reset_team', team_id=team.id) }}"
+        onsubmit="return confirm('Réinitialiser cette équipe ?')">
+    <button class="btn btn-danger btn-sm">Réinitialiser l'équipe</button>
+  </form>
+</div>
+
+{# Renommer #}
+<div class="card" style="margin-bottom:1.25rem">
+  <strong>Renommer l'équipe</strong>
+  <form method="POST" action="{{ url_for('admin_rename_team', team_id=team.id) }}"
+        class="rename-form">
+    <input type="text" name="name" class="form-control"
+           value="{{ team.name }}" required style="max-width:300px">
+    <button class="btn btn-secondary btn-sm">Enregistrer</button>
+  </form>
+</div>
+
+{# Liste des challenges #}
+{% macro flag_row(ch) %}
+{% set st = ch.status %}
+<div class="admin-flag-row">
+  <div class="admin-flag-info">
+    <strong>{{ ch.title }}</strong>
+    <span class="badge badge-pts">{{ ch.points }} pt(s)</span>
+    {% if st.solved %}
+      <span class="badge badge-ok">Résolu</span>
+    {% elif st.locked %}
+      <span class="badge badge-fail">Bloqué</span>
+    {% else %}
+      <span class="badge badge-open">Ouvert</span>
+    {% endif %}
+    <span class="text-muted small">
+      ({{ ch.wrong_count }}/{{ 3 }} mauvaise(s) réponse(s))
+    </span>
+  </div>
+  <div class="admin-flag-actions">
+    {% if not st.solved %}
+    <form method="POST"
+          action="{{ url_for('admin_force_solve', team_id=team.id, challenge_id=ch.id) }}">
+      <button class="btn btn-success btn-sm">Forcer résolu</button>
+    </form>
+    {% endif %}
+    {% if not st.locked %}
+    <form method="POST"
+          action="{{ url_for('admin_lock_flag', team_id=team.id, challenge_id=ch.id) }}">
+      <button class="btn btn-warning btn-sm">Verrouiller</button>
+    </form>
+    {% else %}
+    <form method="POST"
+          action="{{ url_for('admin_unlock_flag', team_id=team.id, challenge_id=ch.id) }}">
+      <button class="btn btn-secondary btn-sm">Déverrouiller</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% for ch in challenges %}
+  {% if ch.is_parent %}
+  <div class="admin-parent-block">
+    <div class="admin-parent-title">{{ ch.title }}</div>
+    {% for sub in ch.children %}
+      {{ flag_row(sub) }}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="padding:.75rem 1rem;margin-bottom:.5rem">
+    {{ flag_row(ch) }}
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% endblock %}

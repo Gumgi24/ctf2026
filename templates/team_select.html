@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Sélection d'équipe — CTF Cybergames 2026{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Choisissez votre équipe</h2>
+<p class="text-muted" style="margin-bottom:1.5rem">
+  Cliquez sur votre équipe pour la rejoindre. Aucun mot de passe requis.<br>
+  Toutes les validations effectuées dans votre session comptent pour cette équipe.
+</p>
+
+{% if current_team_id %}
+<p class="notice-info" style="margin-bottom:1.25rem">
+  Vous faites actuellement partie de
+  <strong>{{ teams | selectattr('id', 'equalto', current_team_id) | map(attribute='name') | first }}</strong>.
+  Vous pouvez changer d'équipe en cliquant ci-dessous.
+</p>
+{% endif %}
+
+<div class="teams-grid">
+  {% for team in teams %}
+  <div class="team-card {% if team.id == current_team_id %}current{% endif %}">
+    <form method="POST" action="{{ url_for('join_team', team_id=team.id) }}">
+      <button type="submit" class="team-btn">
+        {{ team.name }}
+        {% if team.id == current_team_id %}
+        <span class="team-current-mark">✓ Mon équipe</span>
+        {% endif %}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
